@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<title>Mashups Challenge Code Convertor</title>
+<meta id="viewport" name="viewport" content="width=device-width" />
+
+<style>
+html, body {
+	margin: 0;
+	padding: 0;
+}
+html {
+	font: 15pt sans-serif;
+	color: black;
+	background: #C2B9B5;
+}
+.outer {
+  padding: 15px;
+}
+.main {
+  max-width: 8in;
+  margin: 0 auto;
+}
+h1 {
+  text-align: center;
+  font-size: 14pt;
+}
+textarea {
+	display: inline-block;
+	margin: 10px auto;
+	width: 100%;
+	height: 50px;
+	font-size: 18pt;
+
+	border: 1px solid #AAAAAA;
+	border-radius: 3px;
+	padding: 2px 3px;
+
+	box-shadow: inset 0px 1px 2px #CCCCCC, 1px 1px 0 rgba(255,255,255,.6);
+	background: #F8FBFD;
+	color: black;
+  box-sizing: border-box;
+}
+textarea:hover, textarea:focus {
+  border-color: #555;
+}
+input[id=username_input] {
+	width: 50%;
+  float: right;
+
+  resize: none;
+}
+.samelinetext {
+  float:left;
+}
+hr.solid {
+  border-top: 3px solid #bbb;
+}
+hr.rounded {
+  border-top: 8px solid #bbb;
+  border-radius: 5px;
+}
+form p {
+  margin: 0.4em 0;
+}
+.error {
+  color: #D21;
+}
+.toshow {
+    display: none;
+}
+</style>
+
+<div class="outer"><div class="main">
+
+  <h1>Mashups Challenge Code Convertor</h1>
+
+  <p>
+    Paste a Pokemon Showdown tour code into the source box, or click one of the buttons below to autofill it with the latest data from <a href="https://github.com/TheNumberMan/OperationTourCode" target="_blank">Operation Tour Code</a>. It will be converted into a challenge code that you can use to play the format outside of tournaments.
+  </p>
+
+  <hr class="solid">
+
+  <noscript>
+    <p class="error">This webzone requires JavaScript</p>
+  </noscript>
+
+  <h1>
+    <div id="tour_code_buttons_loading_note">(Loading official mashups tour codes...)</div>
+    <div class="toshow" id="tour_code_buttons_title"><a href="https://www.smogon.com/forums/threads/om-mashup-megathread.3657159/" target="_blank">Official Mashups</a> Tour Codes</div>
+    <p><div id="dynamic_buttons_parent"></div></p>
+  </h1>
+
+  <hr class="solid">
+
+  <form>
+    <div class="samelinetext" id="username_label">Challenge opponent's username:</div>
+    <input id="username_input" placeholder="Enter opponent's username"></input>
+    
+    <br>
+    <br>
+
+    <div>Source tour code:</div>
+    <textarea id="tour_code_input" autofocus placeholder="Enter a tour code"></textarea>
+
+    <br>
+    <br>
+
+    <div>Converted challenge code (click text to copy to clipboard):</div>
+    <textarea id="output" readonly placeholder="(Challenge code will appear here)"></textarea>
+  </form>
+
+  <hr class="solid">
+
+</div></div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+'use strict';
+var usernameInputBox = document.getElementById('username_input');
+var tourCodeInputBox = document.getElementById('tour_code_input');
+var outputBox = document.getElementById('output');
+function autosize(textbox) {
+    textbox.style.height = "50px";
+    var newHeight = Math.max(textbox.scrollHeight + 4, 50);
+    textbox.style.height = newHeight + "px";
+}
+function convertTourCode() {
+    const FallbackTargetUsername = 'USERNAME';
+    const TourNewLinePrefix = '/tour new ';
+    const TourRulesLinePrefix = '/tour rules ';
+    const TourRulesetLinePrefix = '/tour ruleset ';
+
+    // Get and clean up target username
+    var sChallengeTargetUsername = usernameInputBox.value;
+    if(!sChallengeTargetUsername) {
+      sChallengeTargetUsername = '';
+    }
+    sChallengeTargetUsername = sChallengeTargetUsername.replace(/\r?\n|\r/g,''); // Remove any line-returns
+    if('' === sChallengeTargetUsername) { // Fallback to default if empty
+      sChallengeTargetUsername = FallbackTargetUsername;
+    }
+
+    // Parse and convert tour code to challenge code
+    var sInputTourCode = tourCodeInputBox.value;
+    var lineArray = sInputTourCode.split('\n');
+    var sNewTourLine = null;
+    var sRulesLine = null;
+    var sRulesetLine = null;
+    var output = '';
+    lineArray.forEach(function(sLine) {
+      if(!sLine) return;
+      sLine = sLine.replace(/ +(?= )/g,''); // Ensure the line of text is single-spaced
+      //console.log(sLine);
+      if(!sNewTourLine && sLine.startsWith(TourNewLinePrefix)) {
+        sNewTourLine = sLine;
+      }
+      else if(!sRulesLine && sLine.startsWith(TourRulesLinePrefix)) {
+        sRulesLine = sLine;
+      }
+      else if(!sRulesetLine && sLine.startsWith(TourRulesetLinePrefix)) {
+        sRulesetLine = sLine;
+      }
+    });
+    var bParseError = false;
+    if('' === sInputTourCode) {
+      bParseError = true;
+    }
+    else if(!sNewTourLine) {
+      output = 'Invalid tour code error: no valid "/tour new" command found.';
+      bParseError = true;
+    }
+    if(!bParseError) {
+      var sPostNewText = sNewTourLine.substr(TourNewLinePrefix.length);
+      //console.log(sPostNewText);
+      var sTourBaseFormatName = sPostNewText.substr(0, sPostNewText.indexOf(','));
+      sTourBaseFormatName.replace(/^\s+|\s+$/g, ''); // Remove any trailing/leading spaces
+
+      if(sRulesLine || sRulesetLine) {
+        var sAddOnRulesText;
+        if(sRulesLine) {
+          sAddOnRulesText = sRulesLine.substr(TourRulesLinePrefix.length);
+        }
+        else if(sRulesetLine) {
+          sAddOnRulesText = sRulesetLine.substr(TourRulesetLinePrefix.length);
+        }
+        sAddOnRulesText.replace(/^\s+|\s+$/g, ''); // Remove any trailing/leading spaces
+        //console.log(sAddOnRulesText);
+        output = `/challenge ${sChallengeTargetUsername}, ${sTourBaseFormatName} @@@${sAddOnRulesText}`;
+      }
+      else {
+        output = `/challenge ${sChallengeTargetUsername}, ${sTourBaseFormatName}`;
+      }
+    }
+
+    outputBox.className = '';
+    outputBox.value = output;
+    autosize(outputBox);
+}
+tourCodeInputBox.oninput = function () {
+    autosize(tourCodeInputBox);
+    convertTourCode();
+};
+tourCodeInputBox.onchange = function () {
+    autosize(tourCodeInputBox);
+    convertTourCode();
+};
+usernameInputBox.oninput = function () {
+    convertTourCode();
+};
+usernameInputBox.onchange = function () {
+    convertTourCode();
+};
+outputBox.onclick = function() {
+    $(this).select(); // Text selection
+    document.execCommand('copy'); // Copy to clipboard
+};
+convertTourCode();
+
+function setTourCodeButtonsLoading(bIsLoading) {
+  var loadingNote = document.getElementById('tour_code_buttons_loading_note');
+  var title = document.getElementById('tour_code_buttons_title');
+  if(bIsLoading) {
+    loadingNote.style.display = "block";
+    title.style.display = "none";
+  } else {
+    loadingNote.style.display = "none";
+    title.style.display = "block";
+  }
+}
+window.onload = function() {
+    const TourCodesURLRoot = 'https://raw.githubusercontent.com/TheNumberMan/OperationTourCode/master/';
+    const OfficialPathExtension = 'official/';
+    const OtherPathExtension = 'other/';
+    const MetadataPathExtension = 'metadata/';
+    const ListFName = 'list.txt';
+    const SpotlightNamesFName = 'spotlightnames.txt';
+    const TourExt = '.tour';
+
+    const MashupsURLRoot = TourCodesURLRoot + 'mashups/';
+    const MashupsMetadataURLRoot = MashupsURLRoot + MetadataPathExtension;
+    const SpotlightNamesURL = MashupsMetadataURLRoot + SpotlightNamesFName;
+    const OfficialURLRoot = MashupsURLRoot + OfficialPathExtension;
+    const OfficialMetadataURLRoot = OfficialURLRoot + MetadataPathExtension;
+    const OfficialListURL = OfficialMetadataURLRoot + ListFName;
+    const OtherURLRoot = MashupsURLRoot + OtherPathExtension;
+    const OtherMetadataURLRoot = OtherURLRoot + MetadataPathExtension;
+    const OtherListURL = OtherMetadataURLRoot + ListFName;
+
+    const NotFoundErrorText = '404: Not Found';
+
+    const TourNameLinePrefix = '/tour name ';
+
+    const TourNameMissingFallback = 'Unknown Tour';
+
+    setTourCodeButtonsLoading(true);
+
+    // Search and download tour codes
+    $.get(OfficialListURL, function(sOfficialsList) {
+      var officialsArray = sOfficialsList.split(',');
+
+      var deferredsArray = [];
+      var tourCodeArray = [];
+      for (var nOfficialItr = 0; nOfficialItr < officialsArray.length; ++nOfficialItr) {
+        if(officialsArray[nOfficialItr].includes('.')) continue;
+        deferredsArray.push(
+        $.get(OfficialURLRoot + officialsArray[nOfficialItr] + TourExt, function(sTourCode) {
+          //console.log(sTourCode);
+          tourCodeArray.push(sTourCode);
+        }));
+    }
+
+    $.when(...deferredsArray).done(function() {
+      const DynamicButtonsParentDiv = document.getElementById('dynamic_buttons_parent');
+
+      var sTourNameLine;
+      var lineArray;
+      for (let nTourItr = 0; nTourItr < tourCodeArray.length; ++nTourItr) {
+        let sTourCode = tourCodeArray[nTourItr]; // Closure-specific
+
+        // Determine format name from tour code
+        lineArray = sTourCode.split('\n');
+        sTourNameLine = null;
+        lineArray.forEach(function(sLine) {
+          if(!sLine) return;
+          sLine = sLine.replace(/ +(?= )/g,''); // Ensure the line of text is single-spaced
+          //console.log(sLine);
+          if(!sTourNameLine && sLine.startsWith(TourNameLinePrefix)) {
+            sTourNameLine = sLine;
+            return;
+          }
+        });
+        let sName = '';
+        if(!sTourNameLine) { // Fallback in case name is missing
+          sName = TourNameMissingFallback;
+        }
+        else { // Accurate name
+          sName = sTourNameLine.substr(TourNameLinePrefix.length);
+        }
+
+        // Create autofill button
+        let button = document.createElement('BUTTON');
+        button.innerHTML = sName;
+        button.onclick = function() {
+          tourCodeInputBox.value = sTourCode;
+          convertTourCode();
+        };
+        DynamicButtonsParentDiv.appendChild(button);
+      }
+      setTourCodeButtonsLoading(false);
+    });
+  });
+};
+</script>
