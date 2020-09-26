@@ -81,7 +81,7 @@ form p {
   <hr class="solid">
 
   <noscript>
-    <p class="error">This webzone requires JavaScript</p>
+    <p class="error">This webzone requires JavaScript ;_;</p>
   </noscript>
 
   <h1>
@@ -99,7 +99,7 @@ form p {
     <br>
     <br>
 
-    <div>Source tour code:</div>
+    <div id="source_tour_code_title">Source tour code:</div>
     <textarea id="tour_code_input" autofocus placeholder="Enter a tour code"></textarea>
 
     <br>
@@ -115,9 +115,14 @@ form p {
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
 'use strict';
+const TourNameLinePrefix = '/tour name ';
+const TourNameMissingFallback = 'Unknown Tour';
+const SourceTourCodeTitleContent = 'Source tour code:';
+
 var usernameInputBox = document.getElementById('username_input');
 var tourCodeInputBox = document.getElementById('tour_code_input');
 var outputBox = document.getElementById('output');
+var sourceTourCodeTitleLabel = document.getElementById('source_tour_code_title');
 function autosize(textbox) {
     textbox.style.height = "50px";
     var newHeight = Math.max(textbox.scrollHeight + 4, 50);
@@ -145,6 +150,7 @@ function convertTourCode() {
     var sNewTourLine = null;
     var sRulesLine = null;
     var sRulesetLine = null;
+    var sTourNameLine = null;
     var output = '';
     lineArray.forEach(function(sLine) {
       if(!sLine) return;
@@ -159,6 +165,9 @@ function convertTourCode() {
       else if(!sRulesetLine && sLine.startsWith(TourRulesetLinePrefix)) {
         sRulesetLine = sLine;
       }
+      else if(!sTourNameLine && sLine.startsWith(TourNameLinePrefix)) {
+        sTourNameLine = sLine;
+      }
     });
     var bParseError = false;
     if('' === sInputTourCode) {
@@ -168,12 +177,16 @@ function convertTourCode() {
       output = 'Invalid tour code error: no valid "/tour new" command found.';
       bParseError = true;
     }
-    if(!bParseError) {
+    if(bParseError) {
+      sourceTourCodeTitleLabel.innerText = SourceTourCodeTitleContent;
+    }
+    else {
       var sPostNewText = sNewTourLine.substr(TourNewLinePrefix.length);
       //console.log(sPostNewText);
       var sTourBaseFormatName = sPostNewText.substr(0, sPostNewText.indexOf(','));
       sTourBaseFormatName.replace(/^\s+|\s+$/g, ''); // Remove any trailing/leading spaces
 
+      // Content
       if(sRulesLine || sRulesetLine) {
         var sAddOnRulesText;
         if(sRulesLine) {
@@ -189,6 +202,16 @@ function convertTourCode() {
       else {
         output = `/challenge ${sChallengeTargetUsername}, ${sTourBaseFormatName}`;
       }
+
+      // Name
+      let sName = '';
+      if(!sTourNameLine) { // Fallback in case name is missing
+        sName = TourNameMissingFallback;
+      }
+      else { // Accurate name
+        sName = sTourNameLine.substr(TourNameLinePrefix.length);
+      }
+      sourceTourCodeTitleLabel.innerText = `${SourceTourCodeTitleContent} ${sName}`;
     }
 
     outputBox.className = '';
@@ -218,6 +241,7 @@ convertTourCode();
 function setTourCodeButtonsLoading(bIsLoading) {
   var loadingNote = document.getElementById('tour_code_buttons_loading_note');
   var title = document.getElementById('tour_code_buttons_title');
+
   if(bIsLoading) {
     loadingNote.style.display = "block";
     title.style.display = "none";
@@ -246,10 +270,6 @@ window.onload = function() {
     const OtherListURL = OtherMetadataURLRoot + ListFName;
 
     const NotFoundErrorText = '404: Not Found';
-
-    const TourNameLinePrefix = '/tour name ';
-
-    const TourNameMissingFallback = 'Unknown Tour';
 
     setTourCodeButtonsLoading(true);
 
