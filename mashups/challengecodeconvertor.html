@@ -128,6 +128,20 @@ function autosize(textbox) {
     var newHeight = Math.max(textbox.scrollHeight + 4, 50);
     textbox.style.height = newHeight + "px";
 }
+function colorizeTextboxes(sState) {
+    if('ERROR' === sState) {
+      tourCodeInputBox.style.backgroundColor = "LightCoral";
+      outputBox.style.backgroundColor = "LightCoral";
+    }
+    else if('OK' === sState) {
+      tourCodeInputBox.style.backgroundColor = "White";
+      outputBox.style.backgroundColor = "LightGreen";
+    }
+    else { // 'NO_INPUT'
+      tourCodeInputBox.style.backgroundColor = "White";
+      outputBox.style.backgroundColor = "LightYellow";
+    }
+}
 function convertTourCode() {
     const FallbackTargetUsername = 'USERNAME';
     const TourNewLinePrefix = '/tour new ';
@@ -172,10 +186,12 @@ function convertTourCode() {
     var bParseError = false;
     if('' === sInputTourCode) {
       bParseError = true;
+      colorizeTextboxes('NO_INPUT');
     }
     else if(!sNewTourLine) {
       output = 'Invalid tour code error: no valid "/tour new" command found.';
       bParseError = true;
+      colorizeTextboxes('ERROR');
     }
     if(bParseError) {
       sourceTourCodeTitleLabel.innerText = SourceTourCodeTitleContent;
@@ -212,6 +228,8 @@ function convertTourCode() {
         sName = sTourNameLine.substr(TourNameLinePrefix.length);
       }
       sourceTourCodeTitleLabel.innerText = `${SourceTourCodeTitleContent} ${sName}`;
+
+      colorizeTextboxes('OK');
     }
 
     outputBox.className = '';
