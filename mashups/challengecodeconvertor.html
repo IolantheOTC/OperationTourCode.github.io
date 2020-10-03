@@ -211,7 +211,13 @@ function convertTourCode() {
         else if(sRulesetLine) {
           sAddOnRulesText = sRulesetLine.substr(TourRulesetLinePrefix.length);
         }
-        sAddOnRulesText.replace(/^\s+|\s+$/g, ''); // Remove any trailing/leading spaces
+        var addOnRulesArray = sAddOnRulesText.split(',');
+        sAddOnRulesText = '';
+        var bFirstLoop = true;
+        addOnRulesArray.forEach(function(sRule) {
+          bFirstLoop ? bFirstLoop = false : sAddOnRulesText += ',';
+          sAddOnRulesText += sRule.replace(/^\s+|\s+$/g, ''); // Remove any trailing/leading spaces from every rule
+        });
         //console.log(sAddOnRulesText);
         output = `/challenge ${sChallengeTargetUsername}, ${sTourBaseFormatName} @@@${sAddOnRulesText}`;
       }
