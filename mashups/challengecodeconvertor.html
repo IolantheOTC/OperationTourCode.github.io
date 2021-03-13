@@ -78,15 +78,24 @@ form p {
     Paste a Pokemon Showdown tour code into the source box, or click one of the buttons below to autofill it with the latest data from <a href="https://github.com/TheNumberMan/OperationTourCode" target="_blank">Operation Tour Code</a>. It will be converted into a challenge code that you can use to play the format outside of tournaments.
   </p>
 
-  <hr class="solid">
-
   <noscript>
     <p class="error">This webzone requires JavaScript ;_;</p>
   </noscript>
 
+  <hr class="solid">
+
+  <div class="toshow" id="mashups_category_buttons_area">
+    <h1>
+      <p><div id="mashups_category_buttons_parent"></div></p>
+    </h1>
+    <hr class="solid">
+  </div>
+
   <h1>
-    <div id="tour_code_buttons_loading_note">(Loading official mashups tour codes...)</div>
-    <div class="toshow" id="tour_code_buttons_title"><a href="https://www.smogon.com/forums/threads/om-mashup-megathread.3657159/" target="_blank">Official Mashups</a> Tour Codes</div>
+    <div id="tour_code_buttons_loading_note">(Loading mashups tour codes...)</div>
+    <div class="toshow" id="official_tour_code_buttons_title"><a href="https://www.smogon.com/forums/threads/om-mashup-megathread.3657159/" target="_blank">Official Mashups</a> Tour Codes</div>
+    <div class="toshow" id="other_tour_code_buttons_title">Other Mashups Tour Codes</div>
+    <div class="toshow" id="loading_error_note">Loading Error</div>
     <p><div id="dynamic_buttons_parent"></div></p>
   </h1>
 
@@ -113,9 +122,9 @@ form p {
 
 </div></div>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="./../api/otc_api.js"></script>
 <script>
 'use strict';
-const TourNameLinePrefix = '/tour name ';
 const TourNameMissingFallback = 'Unknown Tour';
 const SourceTourCodeTitleContent = 'Source tour code:';
 
@@ -123,6 +132,9 @@ var usernameInputBox = document.getElementById('username_input');
 var tourCodeInputBox = document.getElementById('tour_code_input');
 var outputBox = document.getElementById('output');
 var sourceTourCodeTitleLabel = document.getElementById('source_tour_code_title');
+var categoriesDict = null;
+var eActiveMashupCategory = null;
+
 function autosize(textbox) {
     textbox.style.height = "50px";
     var newHeight = Math.max(textbox.scrollHeight + 4, 50);
@@ -144,9 +156,6 @@ function colorizeTextboxes(sState) {
 }
 function convertTourCode() {
     const FallbackTargetUsername = 'USERNAME';
-    const TourNewLinePrefix = '/tour new ';
-    const TourRulesLinePrefix = '/tour rules ';
-    const TourRulesetLinePrefix = '/tour ruleset ';
 
     // Get and clean up target username
     var sChallengeTargetUsername = usernameInputBox.value;
@@ -161,7 +170,8 @@ function convertTourCode() {
     // Parse and convert tour code to challenge code
     var sInputTourCode = tourCodeInputBox.value;
     var lineArray = sInputTourCode.split('\n');
-    var sNewTourLine = null;
+    var sTourNewLine = null;
+    var sTourCreateLine = null;
     var sRulesLine = null;
     var sRulesetLine = null;
     var sTourNameLine = null;
@@ -170,16 +180,19 @@ function convertTourCode() {
       if(!sLine) return;
       sLine = sLine.replace(/ +(?= )/g,''); // Ensure the line of text is single-spaced
       //console.log(sLine);
-      if(!sNewTourLine && sLine.startsWith(TourNewLinePrefix)) {
-        sNewTourLine = sLine;
+      if(!sTourNewLine && sLine.startsWith(OTC.TourNewLinePrefix)) {
+        sTourNewLine = sLine;
       }
-      else if(!sRulesLine && sLine.startsWith(TourRulesLinePrefix)) {
+      else if(!sTourCreateLine && sLine.startsWith(OTC.TourCreateLinePrefix)) {
+        sTourCreateLine = sLine;
+      }
+      else if(!sRulesLine && sLine.startsWith(OTC.TourRulesLinePrefix)) {
         sRulesLine = sLine;
       }
-      else if(!sRulesetLine && sLine.startsWith(TourRulesetLinePrefix)) {
+      else if(!sRulesetLine && sLine.startsWith(OTC.TourRulesetLinePrefix)) {
         sRulesetLine = sLine;
       }
-      else if(!sTourNameLine && sLine.startsWith(TourNameLinePrefix)) {
+      else if(!sTourNameLine && sLine.startsWith(OTC.TourNameLinePrefix)) {
         sTourNameLine = sLine;
       }
     });
@@ -188,8 +201,8 @@ function convertTourCode() {
       bParseError = true;
       colorizeTextboxes('NO_INPUT');
     }
-    else if(!sNewTourLine) {
-      output = 'Invalid tour code error: no valid "/tour new" command found.';
+    else if(!sTourNewLine && !sTourCreateLine) {
+      output = 'Invalid tour code error: no valid "/tour new" or "/tour create" command found.';
       bParseError = true;
       colorizeTextboxes('ERROR');
     }
@@ -197,7 +210,13 @@ function convertTourCode() {
       sourceTourCodeTitleLabel.innerText = SourceTourCodeTitleContent;
     }
     else {
-      var sPostNewText = sNewTourLine.substr(TourNewLinePrefix.length);
+      var sPostNewText;
+      if (sTourNewLine) {
+        sPostNewText = sTourNewLine.substr(OTC.TourNewLinePrefix.length);
+      }
+      else {
+        sPostNewText = sTourCreateLine.substr(OTC.TourCreateLinePrefix.length);
+      }
       //console.log(sPostNewText);
       var sTourBaseFormatName = sPostNewText.substr(0, sPostNewText.indexOf(','));
       sTourBaseFormatName.replace(/^\s+|\s+$/g, ''); // Remove any trailing/leading spaces
@@ -206,15 +225,16 @@ function convertTourCode() {
       if(sRulesLine || sRulesetLine) {
         var sAddOnRulesText;
         if(sRulesLine) {
-          sAddOnRulesText = sRulesLine.substr(TourRulesLinePrefix.length);
+          sAddOnRulesText = sRulesLine.substr(OTC.TourRulesLinePrefix.length);
         }
         else if(sRulesetLine) {
-          sAddOnRulesText = sRulesetLine.substr(TourRulesetLinePrefix.length);
+          sAddOnRulesText = sRulesetLine.substr(OTC.TourRulesetLinePrefix.length);
         }
         var addOnRulesArray = sAddOnRulesText.split(',');
         sAddOnRulesText = '';
         var bFirstLoop = true;
         addOnRulesArray.forEach(function(sRule) {
+          //console.log(sRule);
           bFirstLoop ? bFirstLoop = false : sAddOnRulesText += ',';
           sAddOnRulesText += sRule.replace(/^\s+|\s+$/g, ''); // Remove any trailing/leading spaces from every rule
         });
@@ -231,7 +251,7 @@ function convertTourCode() {
         sName = TourNameMissingFallback;
       }
       else { // Accurate name
-        sName = sTourNameLine.substr(TourNameLinePrefix.length);
+        sName = sTourNameLine.substr(OTC.TourNameLinePrefix.length);
       }
       sourceTourCodeTitleLabel.innerText = `${SourceTourCodeTitleContent} ${sName}`;
 
@@ -262,59 +282,75 @@ outputBox.onclick = function() {
 };
 convertTourCode();
 
-function setTourCodeButtonsLoading(bIsLoading) {
+function setTourCodeButtonsLoading(bIsLoading, bErrorOccurred=false, eMashupCategory=null) {
+  var categoryButtonsArea = document.getElementById('mashups_category_buttons_area');
   var loadingNote = document.getElementById('tour_code_buttons_loading_note');
-  var title = document.getElementById('tour_code_buttons_title');
+  var errorNote = document.getElementById('loading_error_note');
+  var officialTitle = document.getElementById('official_tour_code_buttons_title');
+  var otherTitle = document.getElementById('other_tour_code_buttons_title');
 
-  if(bIsLoading) {
-    loadingNote.style.display = "block";
-    title.style.display = "none";
-  } else {
+  if(bErrorOccurred) {
+    categoryButtonsArea.style.display = "block";
     loadingNote.style.display = "none";
-    title.style.display = "block";
+    errorNote.style.display = "block";
+    officialTitle.style.display = "none";
+    otherTitle.style.display = "none";
+  } else if(bIsLoading) {
+    categoryButtonsArea.style.display = "none";
+    loadingNote.style.display = "block";
+    errorNote.style.display = "none";
+    officialTitle.style.display = "none";
+    otherTitle.style.display = "none";
+  } else {
+    categoryButtonsArea.style.display = "block";
+    loadingNote.style.display = "none";
+    errorNote.style.display = "none";
+    officialTitle.style.display = (OTC.eMashupCategory.Official == eMashupCategory) ? "block" : "none";
+    otherTitle.style.display = (OTC.eMashupCategory.Other == eMashupCategory) ? "block" : "none";
   }
 }
-window.onload = function() {
-    const TourCodesURLRoot = 'https://raw.githubusercontent.com/TheNumberMan/OperationTourCode/master/';
-    const OfficialPathExtension = 'official/';
-    const OtherPathExtension = 'other/';
-    const MetadataPathExtension = 'metadata/';
-    const ListFName = 'list.txt';
-    const SpotlightNamesFName = 'spotlightnames.txt';
-    const TourExt = '.tour';
 
-    const MashupsURLRoot = TourCodesURLRoot + 'mashups/';
-    const MashupsMetadataURLRoot = MashupsURLRoot + MetadataPathExtension;
-    const SpotlightNamesURL = MashupsMetadataURLRoot + SpotlightNamesFName;
-    const OfficialURLRoot = MashupsURLRoot + OfficialPathExtension;
-    const OfficialMetadataURLRoot = OfficialURLRoot + MetadataPathExtension;
-    const OfficialListURL = OfficialMetadataURLRoot + ListFName;
-    const OtherURLRoot = MashupsURLRoot + OtherPathExtension;
-    const OtherMetadataURLRoot = OtherURLRoot + MetadataPathExtension;
-    const OtherListURL = OtherMetadataURLRoot + ListFName;
+function loadDataForMashupCategory(eLoadCategory) {
+  if(eActiveMashupCategory === eLoadCategory) return;
 
-    const NotFoundErrorText = '404: Not Found';
+  setTourCodeButtonsLoading(true);
 
-    setTourCodeButtonsLoading(true);
+  eActiveMashupCategory = eLoadCategory;
 
-    // Search and download tour codes
-    $.get(OfficialListURL, function(sOfficialsList) {
-      var officialsArray = sOfficialsList.split(',');
+  // Remove any existing buttons
+  const DynamicButtonsParentDiv = document.getElementById('dynamic_buttons_parent');
+  DynamicButtonsParentDiv.textContent = '';
 
-      var deferredsArray = [];
-      var tourCodeArray = [];
-      for (var nOfficialItr = 0; nOfficialItr < officialsArray.length; ++nOfficialItr) {
-        if(officialsArray[nOfficialItr].includes('.')) continue;
-        deferredsArray.push(
-        $.get(OfficialURLRoot + officialsArray[nOfficialItr] + TourExt, function(sTourCode) {
-          //console.log(sTourCode);
-          tourCodeArray.push(sTourCode);
-        }));
+  // Search and download tour codes
+  $.get(categoriesDict[eLoadCategory]["ListURL"], function(sCategoryTourNamesList) {
+    var categoryTourNamesArray = sCategoryTourNamesList.split(',');
+    categoryTourNamesArray = categoryTourNamesArray.map(function (sTour) {return sTour.trim();}); // Remove spaces that would break URL
+    categoryTourNamesArray = categoryTourNamesArray.sort(); // Make alphabetical
+
+    var deferredsArray = [];
+    var tourCodeArray = [];
+    var failedURLs = [];
+    for (var nTourItr = 0; nTourItr < categoryTourNamesArray.length; ++nTourItr) {
+      if(categoryTourNamesArray[nTourItr].includes('.')) continue;
+      deferredsArray.push(
+        $.ajax({
+          url: categoriesDict[eLoadCategory]["RootURL"] + categoryTourNamesArray[nTourItr] + OTC.TourExt,
+          success: function(sTourCode) {
+            //console.log(sTourCode);
+            tourCodeArray.push(sTourCode);
+          },
+          error: function(jqXHR, textStatus, errorThrown) {
+            console.log("Could not retrieve tour code at URL: " + this.url);
+            failedURLs.push(this.url);
+            //console.log("jqXHR: " + JSON.stringify(jqXHR));
+            //console.log("textStatus: " + textStatus);
+            //console.log("errorThrown: " + errorThrown);
+          }
+        })
+      );
     }
 
     $.when(...deferredsArray).done(function() {
-      const DynamicButtonsParentDiv = document.getElementById('dynamic_buttons_parent');
-
       var sTourNameLine;
       var lineArray;
       for (let nTourItr = 0; nTourItr < tourCodeArray.length; ++nTourItr) {
@@ -327,7 +363,7 @@ window.onload = function() {
           if(!sLine) return;
           sLine = sLine.replace(/ +(?= )/g,''); // Ensure the line of text is single-spaced
           //console.log(sLine);
-          if(!sTourNameLine && sLine.startsWith(TourNameLinePrefix)) {
+          if(!sTourNameLine && sLine.startsWith(OTC.TourNameLinePrefix)) {
             sTourNameLine = sLine;
             return;
           }
@@ -337,7 +373,7 @@ window.onload = function() {
           sName = TourNameMissingFallback;
         }
         else { // Accurate name
-          sName = sTourNameLine.substr(TourNameLinePrefix.length);
+          sName = sTourNameLine.substr(OTC.TourNameLinePrefix.length);
         }
 
         // Create autofill button
@@ -349,8 +385,30 @@ window.onload = function() {
         };
         DynamicButtonsParentDiv.appendChild(button);
       }
-      setTourCodeButtonsLoading(false);
+      setTourCodeButtonsLoading(false, false, eLoadCategory);
+    })
+    .fail((jqXHR, textStatus, errorThrown) => {
+      setTourCodeButtonsLoading(false, true);
     });
   });
+}
+
+window.onload = function() {
+  setTourCodeButtonsLoading(true);
+
+  const MashupsCategoryButtonsParentDiv = document.getElementById('mashups_category_buttons_parent');
+  for(let nCatItr=0; nCatItr<OTC.eMashupCategory.Count; ++nCatItr) {
+    let button = document.createElement('BUTTON');
+    button.innerHTML = OTC.getMashupCategoryName(nCatItr);
+    button.onclick = function() {
+      loadDataForMashupCategory(nCatItr);
+    };
+    MashupsCategoryButtonsParentDiv.appendChild(button);
+  }
+
+  categoriesDict = OTC.createCategoriesDictionary();
+  //console.log(JSON.stringify(OTC.CategoryPathExtensionDictionary));
+
+  loadDataForMashupCategory(OTC.eMashupCategory.Official);
 };
 </script>
