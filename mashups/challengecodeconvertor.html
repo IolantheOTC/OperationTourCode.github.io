@@ -172,6 +172,8 @@ function convertTourCode() {
     var lineArray = sInputTourCode.split('\n');
     var sTourNewLine = null;
     var sTourCreateLine = null;
+    var tourNewLineArray = null;
+    var sInlineTourName = null;
     var sRulesLine = null;
     var sRulesetLine = null;
     var sTourNameLine = null;
@@ -181,10 +183,24 @@ function convertTourCode() {
       sLine = sLine.replace(/ +(?= )/g,''); // Ensure the line of text is single-spaced
       //console.log(sLine);
       if(!sTourNewLine && sLine.startsWith(OTC.TourNewLinePrefix)) {
-        sTourNewLine = sLine;
+        if(sLine.includes(OTC.InlineNameSeparator)) {
+            tourNewLineArray = sLine.split(OTC.InlineNameSeparator);
+            sTourNewLine = tourNewLineArray[0].replace(/^\s+|\s+$/g, '');
+            sInlineTourName = tourNewLineArray[1].replace(/^\s+|\s+$/g, '');
+        }
+        else {
+            sTourNewLine = sLine;
+        }
       }
       else if(!sTourCreateLine && sLine.startsWith(OTC.TourCreateLinePrefix)) {
-        sTourCreateLine = sLine;
+        if(sLine.includes(OTC.InlineNameSeparator)) {
+            tourNewLineArray = sLine.split(OTC.InlineNameSeparator);
+            sTourCreateLine = tourNewLineArray[0].replace(/^\s+|\s+$/g, '');
+            sInlineTourName = tourNewLineArray[1].replace(/^\s+|\s+$/g, '');
+        }
+        else {
+            sTourCreateLine = sLine;
+        }
       }
       else if(!sRulesLine && sLine.startsWith(OTC.TourRulesLinePrefix)) {
         sRulesLine = sLine;
@@ -247,11 +263,14 @@ function convertTourCode() {
 
       // Name
       let sName = '';
-      if(!sTourNameLine) { // Fallback in case name is missing
-        sName = TourNameMissingFallback;
-      }
-      else { // Accurate name
+      if(sTourNameLine) { // Prioritize name from dedicated line
         sName = sTourNameLine.substr(OTC.TourNameLinePrefix.length);
+      }
+      else if(sInlineTourName) { // Support inline names
+        sName = sInlineTourName;
+      }
+      else { // Fallback in case name is missing
+        sName = TourNameMissingFallback;
       }
       sourceTourCodeTitleLabel.innerText = `${SourceTourCodeTitleContent} ${sName}`;
 
@@ -352,6 +371,10 @@ function loadDataForMashupCategory(eLoadCategory) {
 
     $.when(...deferredsArray).done(function() {
       var sTourNameLine;
+      var sTourNewLine;
+      var sTourCreateLine;
+      var tourNewLineArray;
+      var sInlineTourName;
       var lineArray;
       for (let nTourItr = 0; nTourItr < tourCodeArray.length; ++nTourItr) {
         let sTourCode = tourCodeArray[nTourItr]; // Closure-specific
@@ -359,21 +382,47 @@ function loadDataForMashupCategory(eLoadCategory) {
         // Determine format name from tour code
         lineArray = sTourCode.split('\n');
         sTourNameLine = null;
+        sTourNewLine = null;
+        sTourCreateLine = null;
+        tourNewLineArray = null;
+        sInlineTourName = null;
         lineArray.forEach(function(sLine) {
-          if(!sLine) return;
-          sLine = sLine.replace(/ +(?= )/g,''); // Ensure the line of text is single-spaced
-          //console.log(sLine);
-          if(!sTourNameLine && sLine.startsWith(OTC.TourNameLinePrefix)) {
-            sTourNameLine = sLine;
-            return;
-          }
+            if(!sLine) return;
+            sLine = sLine.replace(/ +(?= )/g,''); // Ensure the line of text is single-spaced
+            console.log(sLine);
+            if(!sTourNewLine && sLine.startsWith(OTC.TourNewLinePrefix)) {
+                if(sLine.includes(OTC.InlineNameSeparator)) {
+                    tourNewLineArray = sLine.split(OTC.InlineNameSeparator);
+                    sTourNewLine = tourNewLineArray[0].replace(/^\s+|\s+$/g, '');
+                    sInlineTourName = tourNewLineArray[1].replace(/^\s+|\s+$/g, '');
+                }
+                else {
+                    sTourNewLine = sLine;
+                }
+            }
+            else if(!sTourCreateLine && sLine.startsWith(OTC.TourCreateLinePrefix)) {
+                if(sLine.includes(OTC.InlineNameSeparator)) {
+                    tourNewLineArray = sLine.split(OTC.InlineNameSeparator);
+                    sTourCreateLine = tourNewLineArray[0].replace(/^\s+|\s+$/g, '');
+                    sInlineTourName = tourNewLineArray[1].replace(/^\s+|\s+$/g, '');
+                }
+                else {
+                    sTourCreateLine = sLine;
+                }
+            }
+            else if(!sTourNameLine && sLine.startsWith(OTC.TourNameLinePrefix)) {
+                sTourNameLine = sLine;
+            }
         });
         let sName = '';
-        if(!sTourNameLine) { // Fallback in case name is missing
-          sName = TourNameMissingFallback;
+        if(sTourNameLine) { // Prioritize name from dedicated line
+            sName = sTourNameLine.substr(OTC.TourNameLinePrefix.length);
         }
-        else { // Accurate name
-          sName = sTourNameLine.substr(OTC.TourNameLinePrefix.length);
+        else if(sInlineTourName) { // Support inline names
+            sName = sInlineTourName;
+        }
+        else { // Fallback in case name is missing
+            sName = TourNameMissingFallback;
         }
 
         // Create autofill button

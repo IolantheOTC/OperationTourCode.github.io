@@ -31,6 +31,8 @@
     exports.TourRulesLinePrefix = TourRulesLinePrefix;
     const TourRulesetLinePrefix = '/tour ruleset ';
     exports.TourRulesetLinePrefix = TourRulesetLinePrefix;
+    const InlineNameSeparator = ',,,';
+    exports.InlineNameSeparator = InlineNameSeparator;
 
     const eMashupCategory = {
         'Official':0,
