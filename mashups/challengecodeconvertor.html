@@ -155,17 +155,13 @@ function colorizeTextboxes(sState) {
     }
 }
 function convertTourCode() {
-    const FallbackTargetUsername = 'USERNAME';
-
     // Get and clean up target username
     var sChallengeTargetUsername = usernameInputBox.value;
     if(!sChallengeTargetUsername) {
       sChallengeTargetUsername = '';
     }
     sChallengeTargetUsername = sChallengeTargetUsername.replace(/\r?\n|\r/g,''); // Remove any line-returns
-    if('' === sChallengeTargetUsername) { // Fallback to default if empty
-      sChallengeTargetUsername = FallbackTargetUsername;
-    }
+    const bNoChallengerUsername = ('' === sChallengeTargetUsername);
 
     // Parse and convert tour code to challenge code
     var sInputTourCode = tourCodeInputBox.value;
@@ -238,6 +234,10 @@ function convertTourCode() {
       sTourBaseFormatName.replace(/^\s+|\s+$/g, ''); // Remove any trailing/leading spaces
 
       // Content
+      output = `/challenge `;
+      if(!bNoChallengerUsername) {
+        output += `${sChallengeTargetUsername}, `;
+      }
       if(sRulesLine || sRulesetLine) {
         var sAddOnRulesText;
         if(sRulesLine) {
@@ -255,10 +255,10 @@ function convertTourCode() {
           sAddOnRulesText += sRule.replace(/^\s+|\s+$/g, ''); // Remove any trailing/leading spaces from every rule
         });
         //console.log(sAddOnRulesText);
-        output = `/challenge ${sChallengeTargetUsername}, ${sTourBaseFormatName} @@@${sAddOnRulesText}`;
+        output += `${sTourBaseFormatName} @@@${sAddOnRulesText}`;
       }
       else {
-        output = `/challenge ${sChallengeTargetUsername}, ${sTourBaseFormatName}`;
+        output += `${sTourBaseFormatName}`;
       }
 
       // Name
