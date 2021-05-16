@@ -342,8 +342,9 @@ function loadDataForMashupCategory(eLoadCategory) {
 
   // Search and download tour codes
   $.get(categoriesDict[eLoadCategory]["ListURL"], function(sCategoryTourNamesList) {
-    var categoryTourNamesArray = sCategoryTourNamesList.split(',');
+    var categoryTourNamesArray = sCategoryTourNamesList.split(OTC.ListSeparator);
     categoryTourNamesArray = categoryTourNamesArray.map(function (sTour) {return sTour.trim();}); // Remove spaces that would break URL
+    categoryTourNamesArray = categoryTourNamesArray.filter((sName) => '' !== sName);
     categoryTourNamesArray = categoryTourNamesArray.sort(); // Make alphabetical
 
     var deferredsArray = [];
