@@ -5,6 +5,8 @@
     const OtherPathExtension = MashupsPathExtension + 'other/';
     const MetadataPathExtension = 'metadata/';
     const ListFName = 'list.txt';
+    const ListSeparator = '\n';
+    exports.ListSeparator = ListSeparator;
     const SpotlightNamesFName = 'spotlightnames.txt';
     const TourExt = '.tour';
     exports.TourExt = TourExt;
