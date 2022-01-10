@@ -1,25 +1,23 @@
 (function(exports) { 
-    const TourCodesURLRoot = 'https://raw.githubusercontent.com/TheNumberMan/OperationTourCode/master/';
+    const TourCodesURLRoot = 'https://raw.githubusercontent.com/OperationTourCode/OperationTourCode/reorganize-structure/';
+    const FormatsPathExtension = 'formats/';
     const MashupsPathExtension = 'mashups/';
-    const OfficialPathExtension = MashupsPathExtension + 'official/';
-    const OtherPathExtension = MashupsPathExtension + 'other/';
     const MetadataPathExtension = 'metadata/';
-    const ListFName = 'list.txt';
-    const ListSeparator = '\n';
-    exports.ListSeparator = ListSeparator;
-    const SpotlightNamesFName = 'spotlightnames.txt';
     const TourExt = '.tour';
     exports.TourExt = TourExt;
+    const ListSeparator = '\n';
+    exports.ListSeparator = ListSeparator;
+    const TextExt = '.txt';
+    const ListFName = 'list' + TextExt;
+    const OfficialsFName = 'officialslist' + TextExt;
+
+    const FormatsURLRoot = TourCodesURLRoot + FormatsPathExtension;
 
     const MashupsURLRoot = TourCodesURLRoot + MashupsPathExtension;
-    const MashupsMetadataURLRoot = MashupsURLRoot + MetadataPathExtension;
-    const SpotlightNamesURL = MashupsMetadataURLRoot + SpotlightNamesFName;
-    const OfficialURLRoot = MashupsURLRoot + OfficialPathExtension;
-    const OfficialMetadataURLRoot = OfficialURLRoot + MetadataPathExtension;
-    const OfficialListURL = OfficialMetadataURLRoot + ListFName;
-    const OtherURLRoot = MashupsURLRoot + OtherPathExtension;
-    const OtherMetadataURLRoot = OtherURLRoot + MetadataPathExtension;
-    const OtherListURL = OtherMetadataURLRoot + ListFName;
+    const OfficialListURL = MashupsURLRoot + OfficialsFName;
+
+    const GeneralMetadataURLRoot = TourCodesURLRoot + MetadataPathExtension;
+    const ListURL = GeneralMetadataURLRoot + ListFName;
 
     const NotFoundErrorText = '404: Not Found';
 
@@ -38,7 +36,7 @@
 
     const eMashupCategory = {
         'Official':0,
-        'Other':1,
+        'All':1,
 
         'Count':2,
 
@@ -51,30 +49,29 @@
         switch(_eMashupCategory) {
             case eMashupCategory.Official:
                 return 'Official Mashups';
-            case eMashupCategory.Other:
-                return 'Other Mashups';
+            case eMashupCategory.All:
+                return 'All Mashups';
         }
         return '';
     }
 
-    const CategoryPathExtensionDictionary = {
-        0: OfficialPathExtension,
-        1: OtherPathExtension,
+    const CategoryPathDictionary = {
+        0: OfficialListURL,
+        1: ListURL,
     };
-    exports.CategoryPathExtensionDictionary = CategoryPathExtensionDictionary;
+    exports.CategoryPathDictionary = CategoryPathDictionary;
 
     exports.createCategoriesDictionary = function createCategoriesDictionary() {
         var dict = {};
-        //console.log(JSON.stringify(CategoryPathExtensionDictionary));
-        for (const key in CategoryPathExtensionDictionary) {
+        //console.log(JSON.stringify(CategoryPathDictionary));
+        for (const key in CategoryPathDictionary) {
             //console.log(key);
             // Check that the property/key is defined in the object itself, not in parent
-            if (!CategoryPathExtensionDictionary.hasOwnProperty(key)) continue;
-            //console.log(key, CategoryPathExtensionDictionary[key]);
-            let sPathExt = CategoryPathExtensionDictionary[key];
+            if (!CategoryPathDictionary.hasOwnProperty(key)) continue;
+            //console.log(key, CategoryPathDictionary[key]);
             dict[key] = {};
-            dict[key]["ListURL"] = TourCodesURLRoot + sPathExt + MetadataPathExtension + ListFName;
-            dict[key]["RootURL"] = TourCodesURLRoot + sPathExt;
+            dict[key]["ListURL"] = CategoryPathDictionary[key];
+            dict[key]["RootURL"] = FormatsURLRoot;
         }
         return dict;
     }
